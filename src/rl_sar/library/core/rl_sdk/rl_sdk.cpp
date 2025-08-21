@@ -110,29 +110,35 @@ torch::Tensor RL::ComputeObservation()
             diff = this->QuatRotateInverse(this->obs.base_quat, diff);
             diff = diff.index({torch::indexing::Slice(0, 1), torch::indexing::Slice(0, 2)});
             this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
-            auto cur = torch::cat(std::vector<torch::Tensor>{diff, this->time_rest, allocated_time}, 1);
+            auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
             obs_list.push_back(HistObs("command_hussar", cur));
+            std::cout << "command_hussar" << cur << std::endl;
         }
         else if (observation == "ang_vel_hussar"){
             auto cur = this->obs.ang_vel * this->params.ang_vel_scale;
             obs_list.push_back(HistObs("ang_vel_hussar", cur));
+            // std::cout << "ang_vel_hussar" << cur << std::endl;
         }
         else if (observation == "gravity_vec_multi_hussar"){
             auto cur = this->QuatRotateInverse(this->obs.base_quat, this->obs.gravity_vec);
             obs_list.push_back(HistObs("gravity_vec_multi_hussar", cur));
+            // std::cout << "gravity_vec_multi_hussar" << cur << std::endl;
         }
         else if (observation == "dof_pos_multi_hussar"){
             auto cur = this->obs.dof_pos - this->params.default_dof_pos;
             cur = cur * this->params.dof_pos_scale;
             obs_list.push_back(HistObs("dof_pos_multi_hussar", cur));
+            // std::cout << "dof_pos_multi_hussar" << cur << std::endl;
         }
         else if (observation == "dof_vel_multi_hussar"){
             auto cur = this->obs.dof_vel * this->params.dof_vel_scale;
             obs_list.push_back(HistObs("dof_vel_multi_hussar", cur));
+            // std::cout << "dof_vel_multi_hussar" << cur << std::endl;
         }
         else if (observation == "prev_actions_multi_hussar"){
             auto cur = this->obs.actions;
             obs_list.push_back(HistObs("prev_actions_multi_hussar", cur));
+            // std::cout << "prev_actions_multi_hussar" << cur << std::endl;
         }
         else if (observation == "grid_map_hussar"){
             torch::Tensor occ = this->voxelizer3d->fetchVoxelObservation();

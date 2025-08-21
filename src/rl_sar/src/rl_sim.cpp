@@ -4,6 +4,7 @@
  */
 
 #include "rl_sim.hpp"
+#include <gazebo_msgs/srv/set_model_configuration.hpp>
 
 RL_Sim::RL_Sim()
 #if defined(USE_ROS2)
@@ -157,8 +158,18 @@ RL_Sim::RL_Sim()
     this->gazebo_unpause_physics_client = this->create_client<std_srvs::srv::Empty>("/unpause_physics");
     this->gazebo_reset_world_client = this->create_client<std_srvs::srv::Empty>("/reset_world");
 
-    auto empty_request = std::make_shared<std_srvs::srv::Empty::Request>();
-    auto result = this->gazebo_reset_world_client->async_send_request(empty_request);
+    auto client = this->create_client<gazebo_msgs::srv::SetModelConfiguration>("/gazebo/set_model_configuration");
+    auto req = std::make_shared<gazebo_msgs::srv::SetModelConfiguration::Request>();
+    req->model_name = "robot_model";
+    req->urdf_param_name = "robot_description";
+    req->joint_names = this->params.joint_names;
+    auto x = this->params.default_dof_pos.detach().to(torch::kFloat64).contiguous().view({-1}).cpu();
+    const double* p = x.data_ptr<double>();
+    auto default_dof_pos = std::vector<double>(p, p + x.numel());
+    req->joint_positions = default_dof_pos;
+    auto result = client->async_send_request(req);
+    // auto empty_request = std::make_shared<std_srvs::srv::Empty::Request>();
+    // auto result = this->gazebo_reset_world_client->async_send_request(empty_request);
 #endif
 
     // loop
@@ -547,8 +558,6 @@ void RL_Sim::RunModel()
 
     if (this->rl_init_done && simulation_running)
     {
-        std::cout << "here c  is ok" << std::endl;
-        
         this->episode_length_buf += 1;
         // this->obs.lin_vel = torch::tensor({{this->vel.linear.x, this->vel.linear.y, this->vel.linear.z}});
         this->obs.ang_vel = torch::tensor(this->robot_state.imu.gyroscope).unsqueeze(0);
@@ -564,10 +573,8 @@ void RL_Sim::RunModel()
         this->obs.dof_pos = torch::tensor(this->robot_state.motor_state.q).narrow(0, 0, this->params.num_of_dofs).unsqueeze(0);
         this->obs.dof_vel = torch::tensor(this->robot_state.motor_state.dq).narrow(0, 0, this->params.num_of_dofs).unsqueeze(0);
         this->obs.target_pos = this->target_pos.to(this->obs.base_quat.device()); // TODO: To debug here
-        std::cout << "here a  is ok" << std::endl;
 
         this->obs.actions = this->Forward();
-        std::cout << "here b  is ok" << std::endl;
 
         this->ComputeOutput(this->obs.actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
 
@@ -602,21 +609,19 @@ torch::Tensor RL_Sim::Forward()
     torch::autograd::GradMode::set_enabled(false);
 
     torch::Tensor clamped_obs = this->ComputeObservation();
-    // std::cout << clamped_obs.sizes() << std::endl;
-    torch::Tensor mask = torch::ones({1}, torch::TensorOptions().dtype(torch::kBool));
+    torch::Tensor mask = torch::ones({1,1}, torch::TensorOptions().dtype(torch::kBool));
     torch::Tensor actions;
     if (this->params.observations_history.size() != 0)
     {
         this->history_obs_buf.insert(clamped_obs);
         this->history_obs = this->history_obs_buf.get_obs_vec(this->params.observations_history);
-        actions = this->model.run(clamped_obs, this->voxel_grid, mask);
+        voxel_grid = torch::zeros_like(this->voxel_grid);
+        actions = this->model.run(clamped_obs, voxel_grid, mask);
     }
     else
     {
-        // actions = this->model.forward({clamped_obs}).toTensor();
         // TODO get policy grid mask here
         actions = this->model.run(clamped_obs, this->voxel_grid, mask);
-        // std::cout << actions.sizes() << std::endl;
 
     }
 

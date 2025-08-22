@@ -428,7 +428,7 @@ void RL_Sim::RobotControl()
 
         this->GetState(&this->robot_state);
         this->StateController(&this->robot_state, &this->robot_command);
-        this->SetCommand(&this->robot_command);
+        this->SetCommand(&this->robot_command); // urdf order
     }
 }
 
@@ -574,9 +574,14 @@ void RL_Sim::RunModel()
         this->obs.dof_vel = torch::tensor(this->robot_state.motor_state.dq).narrow(0, 0, this->params.num_of_dofs).unsqueeze(0);
         this->obs.target_pos = this->target_pos.to(this->obs.base_quat.device()); // TODO: To debug here
 
-        this->obs.actions = this->Forward();
+        auto actions = this->Forward();
+        this->obs.actions = actions;
+        // auto urdf_actions = torch::zeros_like(actions);
+        // for (int i = 0; i < this->params.num_of_dofs; ++i){
+        //     urdf_actions[0][this->params.joint_mapping[i]] = actions[0][i];
+        // }
 
-        this->ComputeOutput(this->obs.actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
+        this->ComputeOutput(actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
 
         if (this->output_dof_pos.defined() && this->output_dof_pos.numel() > 0)
         {

@@ -561,6 +561,8 @@ void RL_Sim::RunModel()
         this->episode_length_buf += 1;
         // this->obs.lin_vel = torch::tensor({{this->vel.linear.x, this->vel.linear.y, this->vel.linear.z}});
         this->obs.ang_vel = torch::tensor(this->robot_state.imu.gyroscope).unsqueeze(0);
+        // ZWT DEBUG
+        std::cout << "obs ang vel from sim: " << this->obs.ang_vel << std::endl;
         if (this->control.navigation_mode)
         {
             this->obs.commands = torch::tensor({{this->cmd_vel.linear.x, this->cmd_vel.linear.y, this->cmd_vel.angular.z}});
@@ -621,12 +623,14 @@ torch::Tensor RL_Sim::Forward()
         this->history_obs_buf.insert(clamped_obs);
         this->history_obs = this->history_obs_buf.get_obs_vec(this->params.observations_history);
         voxel_grid = torch::zeros_like(this->voxel_grid);
-        actions = this->model.run(clamped_obs, voxel_grid, mask);
+        // ZWT DEBUG
+        std::cout << "Obs elements: angle_vel" << clamped_obs.slice(1, 4, 7) << std::endl;
+        // actions = this->model.run(clamped_obs, voxel_grid, mask);
     }
     else
     {
         // TODO get policy grid mask here
-        actions = this->model.run(clamped_obs, this->voxel_grid, mask);
+        // actions = this->model.run(clamped_obs, this->voxel_grid, mask);
 
     }
 

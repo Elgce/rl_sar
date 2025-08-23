@@ -5,7 +5,7 @@
 
 #include "rl_sdk.hpp"
 // #include "pc_voxelizer.hpp"
-#include <onnxruntime_cxx_api.h>
+// #include <onnxruntime_cxx_api.h>
 #include <torch/torch.h>
 
 void RL::StateController(const RobotState<double>* state, RobotCommand<double>* command)
@@ -117,7 +117,8 @@ torch::Tensor RL::ComputeObservation()
         else if (observation == "ang_vel_hussar"){
             auto cur = this->obs.ang_vel * this->params.ang_vel_scale;
             obs_list.push_back(HistObs("ang_vel_hussar", cur));
-            // std::cout << "ang_vel_hussar" << cur << std::endl;
+            // ZWT DEBUG
+            std::cout << "ang_vel_hussar" << cur << std::endl;
         }
         else if (observation == "gravity_vec_multi_hussar"){
             auto cur = this->QuatRotateInverse(this->obs.base_quat, this->obs.gravity_vec);
@@ -241,8 +242,8 @@ void RL::InitRL(std::string robot_path)
 
     // init model
     std::string model_path = std::string(CMAKE_CURRENT_SOURCE_DIR) + "/policy/" + robot_path + "/" + this->params.model_name;
-    // this->model = torch::jit::load(model_path);
-    this->model.load(model_path, /*cuda_device= */0);
+    this->model = torch::jit::load(model_path);
+    // this->model.load(model_path, /*cuda_device= */0);
 
 }
 

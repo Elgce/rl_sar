@@ -75,23 +75,23 @@ if(NOT USE_CMAKE)
     find_package(gazebo REQUIRED)
 endif()
 
-if(NOT DEFINED ORT_ROOT)
+#if(NOT DEFINED ORT_ROOT)
 #   message(FATAL_ERROR "Please pass -DORT_ROOT=/abs/path/to/onnxruntime-linux-x64-gpu-<ver>")
-    set(ORT_ROOT "/opt/onnxruntime-linux-x64-gpu-1.22.0/")
-endif()
+#    set(ORT_ROOT "/opt/onnxruntime-linux-x64-gpu-1.22.0/")
+#endif()
 
-set(ORT_INCLUDE_DIR "${ORT_ROOT}/include")
-set(ORT_LIB_DIR "${ORT_ROOT}/lib")
+#set(ORT_INCLUDE_DIR "${ORT_ROOT}/include")
+#set(ORT_LIB_DIR "${ORT_ROOT}/lib")
 
-include_directories("${ORT_INCLUDE_DIR}")
-link_directories("${ORT_LIB_DIR}")
+#include_directories("${ORT_INCLUDE_DIR}")
+#link_directories("${ORT_LIB_DIR}")
 
-set(
-    ORT_LIBS
-    onnxruntime
-    onnxruntime_providers_shared
-    onnxruntime_providers_cuda
-)
+#set(
+#    ORT_LIBS
+#    onnxruntime
+#    onnxruntime_providers_shared
+#    onnxruntime_providers_cuda
+#)
 
 find_package(Torch REQUIRED)
 find_package(TBB REQUIRED)

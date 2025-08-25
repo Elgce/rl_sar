@@ -12,15 +12,16 @@ public:
     OnnxPolicy() : env_(ORT_LOGGING_LEVEL_WARNING, "rl") {}
 
     inline void load(const std::string& onnx_path, int cuda_device = 0) {
-        OrtCUDAProviderOptions cuda{};
-        cuda.device_id = cuda_device;
-        cuda.arena_extend_strategy = 0;
-        cuda.gpu_mem_limit = SIZE_MAX;
-        cuda.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive;
-        cuda.do_copy_in_default_stream = 1;
+        // OrtCUDAProviderOptions cuda{};
+        // cuda.device_id = cuda_device;
+        // cuda.arena_extend_strategy = 0;
+        // cuda.gpu_mem_limit = SIZE_MAX;
+        // cuda.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive;
+        // cuda.do_copy_in_default_stream = 1;
 
         so_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
-        so_.AppendExecutionProvider_CUDA(cuda);
+        // so_.AppendExecutionProvider_CUDA(cuda);
+        // so_.AppendExecutionProvider_CPU(OrtCPUProviderOptions{});
 
         session_ = std::make_unique<Ort::Session>(env_, onnx_path.c_str(), so_);
 

@@ -562,7 +562,7 @@ void RL_Sim::RunModel()
         // this->obs.lin_vel = torch::tensor({{this->vel.linear.x, this->vel.linear.y, this->vel.linear.z}});
         this->obs.ang_vel = torch::tensor(this->robot_state.imu.gyroscope).unsqueeze(0);
         // ZWT DEBUG
-        std::cout << "obs ang vel from sim: " << this->obs.ang_vel << std::endl;
+        // std::cout << "obs ang vel from sim: " << this->obs.ang_vel. << std::endl;
         if (this->control.navigation_mode)
         {
             this->obs.commands = torch::tensor({{this->cmd_vel.linear.x, this->cmd_vel.linear.y, this->cmd_vel.angular.z}});
@@ -622,17 +622,182 @@ torch::Tensor RL_Sim::Forward()
     {
         this->history_obs_buf.insert(clamped_obs);
         this->history_obs = this->history_obs_buf.get_obs_vec(this->params.observations_history);
-        voxel_grid = torch::zeros_like(this->voxel_grid);
         // ZWT DEBUG
-        std::cout << "Obs elements: angle_vel" << clamped_obs.slice(1, 4, 7) << std::endl;
-        // actions = this->model.run(clamped_obs, voxel_grid, mask);
+        // ZWT DEBUG - Print detailed observations
+        std::cout << "=== Detailed Observations (Total: " << clamped_obs.size(1) << ") ===" << std::endl;
+        
+        int start_idx = 0;
+        
+        // command_hussar (4 dims)
+        auto command_slice = clamped_obs.slice(1, start_idx, start_idx + 4);
+        std::cout << "command_hussar [" << start_idx << ":" << start_idx + 4 << "]: [";
+        for (int i = 0; i < 4; ++i) {
+            std::cout << command_slice[0][i].item<float>();
+            if (i < 3) std::cout << ", ";
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 4;
+        
+        // ang_vel_hussar (3 dims)
+        auto ang_vel_slice = clamped_obs.slice(1, start_idx, start_idx + 3);
+        std::cout << "ang_vel_hussar [" << start_idx << ":" << start_idx + 3 << "]: [";
+        for (int i = 0; i < 3; ++i) {
+            std::cout << ang_vel_slice[0][i].item<float>();
+            if (i < 2) std::cout << ", ";
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 3;
+        
+        // gravity_vec_multi_hussar (3*3 = 9 dims)
+        auto gravity_slice = clamped_obs.slice(1, start_idx, start_idx + 9);
+        std::cout << "gravity_vec_multi_hussar [" << start_idx << ":" << start_idx + 9 << "]: [";
+        for (int i = 0; i < 9; ++i) {
+            std::cout << gravity_slice[0][i].item<float>();
+            if (i < 8) std::cout << ", ";
+            if ((i + 1) % 3 == 0 && i < 8) std::cout << " | ";  // 每3个元素用 | 分隔
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 9;
+        
+        // dof_pos_multi_hussar (29*3 = 87 dims)
+        auto dof_pos_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "dof_pos_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << dof_pos_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        start_idx += 87;
+        
+        // dof_vel_multi_hussar (29*3 = 87 dims)
+        auto dof_vel_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "dof_vel_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << dof_vel_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        start_idx += 87;
+        
+        // prev_actions_multi_hussar (29*3 = 87 dims)
+        auto prev_actions_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "prev_actions_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << prev_actions_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        
+        std::cout << "================================================" << std::endl;
+        voxel_grid = torch::zeros_like(this->voxel_grid);
+        actions = this->model.run(clamped_obs, voxel_grid, mask);
     }
     else
     {
         // TODO get policy grid mask here
-        // actions = this->model.run(clamped_obs, this->voxel_grid, mask);
+        // ZWT DEBUG - Print detailed observations
+        std::cout << "=== Detailed Observations (Total: " << clamped_obs.size(1) << ") ===" << std::endl;
+        
+        int start_idx = 0;
+        
+        // command_hussar (4 dims)
+        auto command_slice = clamped_obs.slice(1, start_idx, start_idx + 4);
+        std::cout << "command_hussar [" << start_idx << ":" << start_idx + 4 << "]: [";
+        for (int i = 0; i < 4; ++i) {
+            std::cout << command_slice[0][i].item<float>();
+            if (i < 3) std::cout << ", ";
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 4;
+        
+        // ang_vel_hussar (3 dims)
+        auto ang_vel_slice = clamped_obs.slice(1, start_idx, start_idx + 3);
+        std::cout << "ang_vel_hussar [" << start_idx << ":" << start_idx + 3 << "]: [";
+        for (int i = 0; i < 3; ++i) {
+            std::cout << ang_vel_slice[0][i].item<float>();
+            if (i < 2) std::cout << ", ";
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 3;
+        
+        // gravity_vec_multi_hussar (3*3 = 9 dims)
+        auto gravity_slice = clamped_obs.slice(1, start_idx, start_idx + 9);
+        std::cout << "gravity_vec_multi_hussar [" << start_idx << ":" << start_idx + 9 << "]: [";
+        for (int i = 0; i < 9; ++i) {
+            std::cout << gravity_slice[0][i].item<float>();
+            if (i < 8) std::cout << ", ";
+            if ((i + 1) % 3 == 0 && i < 8) std::cout << " | ";  // 每3个元素用 | 分隔
+        }
+        std::cout << "]" << std::endl;
+        start_idx += 9;
+        
+        // dof_pos_multi_hussar (29*3 = 87 dims)
+        auto dof_pos_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "dof_pos_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << dof_pos_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        start_idx += 87;
+        
+        // dof_vel_multi_hussar (29*3 = 87 dims)
+        auto dof_vel_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "dof_vel_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << dof_vel_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        start_idx += 87;
+        
+        // prev_actions_multi_hussar (29*3 = 87 dims)
+        auto prev_actions_slice = clamped_obs.slice(1, start_idx, start_idx + 87);
+        std::cout << "prev_actions_multi_hussar [" << start_idx << ":" << start_idx + 87 << "]:" << std::endl;
+        for (int step = 0; step < 3; ++step) {
+            std::cout << "  Step " << step << ": [";
+            for (int joint = 0; joint < 29; ++joint) {
+                int idx = step * 29 + joint;
+                std::cout << prev_actions_slice[0][idx].item<float>();
+                if (joint < 28) std::cout << ", ";
+                if ((joint + 1) % 10 == 0 && joint < 28) std::cout << std::endl << "           ";
+            }
+            std::cout << "]" << std::endl;
+        }
+        
+        std::cout << "================================================" << std::endl;
+        voxel_grid = torch::zeros_like(this->voxel_grid);
+        actions = this->model.run(clamped_obs, voxel_grid, mask);
 
     }
+
+    // ZWT DEBUG
+    // actions = torch::zeros({1, this->params.num_of_dofs});
 
     if (this->params.clip_actions_upper.numel() != 0 && this->params.clip_actions_lower.numel() != 0)
     {

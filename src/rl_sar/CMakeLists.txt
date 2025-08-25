@@ -93,13 +93,21 @@ endif()
 #    onnxruntime_providers_cuda
 #)
 
+#### onnxruntime ####
+set(ONNXRUNTIME_ROOT_PATH "/usr/local")
+set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_ROOT_PATH}/include/onnxruntime")
+set(ONNXRUNTIME_LIB_DIRS "${ONNXRUNTIME_ROOT_PATH}/lib")
+find_package(onnxruntime REQUIRED)
 find_package(Torch REQUIRED)
 find_package(TBB REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
 link_directories(/usr/local/lib)
-include_directories(${YAML_CPP_INCLUDE_DIR})
+
+include_directories(${YAML_CPP_INCLUDE_DIR}
+            ${ONNXRUNTIME_INCLUDE_DIRS}
+        )
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
     message(STATUS "Current system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
@@ -175,6 +183,7 @@ include_directories(
     library/core/loop
     library/core/fsm
     policy
+    ${ONNXRUNTIME_LIB_DIRS}
 )
 
 add_library(rl_sdk library/core/rl_sdk/rl_sdk.cpp)
@@ -188,7 +197,8 @@ target_link_libraries(rl_sdk PUBLIC
     Python3::Module
     TBB::tbb
     Eigen3::Eigen
-    ${ORT_LIBS}
+    onnxruntime
+#    ${ORT_LIBS}
 )
 
 if(NOT USE_CMAKE)
@@ -235,7 +245,8 @@ if(NOT USE_CMAKE)
         observation_buffer
         yaml-cpp
         Threads::Threads
-        ${ORT_LIBS}
+        onnxruntime
+#        ${ORT_LIBS}
     )
     set_target_properties(rl_sim PROPERTIES
         BUILD_RPATH "${ORT_LIB_DIR}"
@@ -258,6 +269,7 @@ if(NOT USE_CMAKE)
             geometry_msgs
             tf2_ros
             tf2_geometry_msgs
+            onnxruntime
         )
         install(TARGETS rl_sim DESTINATION lib/${PROJECT_NAME})
     endif()

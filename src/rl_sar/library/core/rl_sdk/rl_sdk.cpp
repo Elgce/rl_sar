@@ -4,8 +4,8 @@
  */
 
 #include "rl_sdk.hpp"
-// #include "pc_voxelizer.hpp"
-// #include <onnxruntime_cxx_api.h>
+#include "pc_voxelizer.hpp"
+#include <onnxruntime_cxx_api.h>
 #include <torch/torch.h>
 
 void RL::StateController(const RobotState<double>* state, RobotCommand<double>* command)
@@ -112,34 +112,83 @@ torch::Tensor RL::ComputeObservation()
             this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
             auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
             obs_list.push_back(HistObs("command_hussar", cur));
-            std::cout << "command_hussar" << cur << std::endl;
+            std::cout << "command_hussar: ["  << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << ", " 
+                      << cur[0][3].item<float>() << "]" << std::endl;
         }
         else if (observation == "ang_vel_hussar"){
             auto cur = this->obs.ang_vel * this->params.ang_vel_scale;
             obs_list.push_back(HistObs("ang_vel_hussar", cur));
             // ZWT DEBUG
-            std::cout << "ang_vel_hussar" << cur << std::endl;
+            std::cout << "ang_vel_hussar: [" << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << "]" << std::endl;
         }
         else if (observation == "gravity_vec_multi_hussar"){
             auto cur = this->QuatRotateInverse(this->obs.base_quat, this->obs.gravity_vec);
             obs_list.push_back(HistObs("gravity_vec_multi_hussar", cur));
-            // std::cout << "gravity_vec_multi_hussar" << cur << std::endl;
+            std::cout << "gravity_vec_multi_hussar: [" << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << "]" << std::endl;
         }
         else if (observation == "dof_pos_multi_hussar"){
             auto cur = this->obs.dof_pos - this->params.default_dof_pos;
             cur = cur * this->params.dof_pos_scale;
             obs_list.push_back(HistObs("dof_pos_multi_hussar", cur));
-            // std::cout << "dof_pos_multi_hussar" << cur << std::endl;
+            std::cout << "dof_pos_multi_hussar: [" << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << ","
+                      << cur[0][3].item<float>() << ", " << cur[0][4].item<float>() << ","
+                      << cur[0][5].item<float>() << ", " << cur[0][6].item<float>() << ","
+                      << cur[0][7].item<float>() << ", " << cur[0][8].item<float>() << ","
+                      << cur[0][9].item<float>() << ", " << cur[0][10].item<float>() << ","
+                      << cur[0][11].item<float>() << ", " << cur[0][12].item<float>() << ","
+                      << cur[0][13].item<float>() << ", " << cur[0][14].item<float>() << ","
+                      << cur[0][15].item<float>() << ", " << cur[0][16].item<float>() << ","
+                      << cur[0][17].item<float>() << ", " << cur[0][18].item<float>() << ","
+                      << cur[0][19].item<float>() << ", " << cur[0][20].item<float>() << ","
+                      << cur[0][21].item<float>() << ", " << cur[0][22].item<float>() << ","
+                      << cur[0][23].item<float>() << ", " << cur[0][24].item<float>() << ","
+                      << cur[0][25].item<float>() << ", " << cur[0][26].item<float>() << ","
+                      << cur[0][27].item<float>() << ", " << cur[0][28].item<float>() << ","
+                      << "]" << std::endl;
         }
         else if (observation == "dof_vel_multi_hussar"){
             auto cur = this->obs.dof_vel * this->params.dof_vel_scale;
             obs_list.push_back(HistObs("dof_vel_multi_hussar", cur));
-            // std::cout << "dof_vel_multi_hussar" << cur << std::endl;
+            std::cout << "dof_vel_multi_hussar: [" << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << ","
+                      << cur[0][3].item<float>() << ", " << cur[0][4].item<float>() << ","
+                      << cur[0][5].item<float>() << ", " << cur[0][6].item<float>() << ","
+                      << cur[0][7].item<float>() << ", " << cur[0][8].item<float>() << ","
+                      << cur[0][9].item<float>() << ", " << cur[0][10].item<float>() << ","
+                      << cur[0][11].item<float>() << ", " << cur[0][12].item<float>() << ","
+                      << cur[0][13].item<float>() << ", " << cur[0][14].item<float>() << ","
+                      << cur[0][15].item<float>() << ", " << cur[0][16].item<float>() << ","
+                      << cur[0][17].item<float>() << ", " << cur[0][18].item<float>() << ","
+                      << cur[0][19].item<float>() << ", " << cur[0][20].item<float>() << ","
+                      << cur[0][21].item<float>() << ", " << cur[0][22].item<float>() << ","
+                      << cur[0][23].item<float>() << ", " << cur[0][24].item<float>() << ","
+                      << cur[0][25].item<float>() << ", " << cur[0][26].item<float>() << ","
+                      << cur[0][27].item<float>() << ", " << cur[0][28].item<float>() << ","
+                      << "]" << std::endl;
         }
         else if (observation == "prev_actions_multi_hussar"){
             auto cur = this->obs.actions;
             obs_list.push_back(HistObs("prev_actions_multi_hussar", cur));
-            // std::cout << "prev_actions_multi_hussar" << cur << std::endl;
+            std::cout << "prev_actions_multi_hussar: [" << cur[0][0].item<float>() << ", " 
+                      << cur[0][1].item<float>() << ", " << cur[0][2].item<float>() << ","
+                      << cur[0][3].item<float>() << ", " << cur[0][4].item<float>() << ","
+                      << cur[0][5].item<float>() << ", " << cur[0][6].item<float>() << ","
+                      << cur[0][7].item<float>() << ", " << cur[0][8].item<float>() << ","
+                      << cur[0][9].item<float>() << ", " << cur[0][10].item<float>() << ","
+                      << cur[0][11].item<float>() << ", " << cur[0][12].item<float>() << ","
+                      << cur[0][13].item<float>() << ", " << cur[0][14].item<float>() << ","
+                      << cur[0][15].item<float>() << ", " << cur[0][16].item<float>() << ","
+                      << cur[0][17].item<float>() << ", " << cur[0][18].item<float>() << ","
+                      << cur[0][19].item<float>() << ", " << cur[0][20].item<float>() << ","
+                      << cur[0][21].item<float>() << ", " << cur[0][22].item<float>() << ","
+                      << cur[0][23].item<float>() << ", " << cur[0][24].item<float>() << ","
+                      << cur[0][25].item<float>() << ", " << cur[0][26].item<float>() << ","
+                      << cur[0][27].item<float>() << ", " << cur[0][28].item<float>() << ","
+                      << "]" << std::endl;
         }
         else if (observation == "grid_map_hussar"){
             torch::Tensor occ = this->voxelizer3d->fetchVoxelObservation();
@@ -242,8 +291,8 @@ void RL::InitRL(std::string robot_path)
 
     // init model
     std::string model_path = std::string(CMAKE_CURRENT_SOURCE_DIR) + "/policy/" + robot_path + "/" + this->params.model_name;
-    this->model = torch::jit::load(model_path);
-    // this->model.load(model_path, /*cuda_device= */0);
+    // this->model = torch::jit::load(model_path);
+    this->model.load(model_path, /*cuda_device= */0);
 
 }
 

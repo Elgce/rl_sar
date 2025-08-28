@@ -191,9 +191,9 @@ RL_Sim::RL_Sim()
     this->loop_plot = std::make_shared<LoopFunc>("loop_plot", 0.001, std::bind(&RL_Sim::Plot, this));
     this->loop_plot->start();
 #endif
-#ifdef CSV_LOGGER
-    this->CSVInit(this->robot_name);
-#endif
+// #ifdef CSV_LOGGER
+//     this->CSVInit(this->robot_name);
+// #endif
 
     std::cout << LOGGER::INFO << "RL_Sim start" << std::endl;
 }
@@ -323,8 +323,15 @@ void RL_Sim::SetCommand(const RobotCommand<double> *command)
         this->robot_command_publisher_msg.motor_command[this->params.joint_mapping[i]].kp = command->motor_command.kp[i];
         this->robot_command_publisher_msg.motor_command[this->params.joint_mapping[i]].kd = command->motor_command.kd[i];
         this->robot_command_publisher_msg.motor_command[this->params.joint_mapping[i]].tau = command->motor_command.tau[i];
+        // std::cout << "tau" << command->motor_command.tau << std::endl;
 #endif
     }
+    // std::cout << "q" << command->motor_command.q << std::endl;
+    // std::cout << "dq" << command->motor_command.dq << std::endl;
+    // std::cout << "kp" << command->motor_command.kp << std::endl;
+    // std::cout << "kd" << command->motor_command.kd << std::endl;
+    // std::cout << "tau" << command->motor_command.tau << std::endl;
+
 
 #if defined(USE_ROS1)
     for (int i = 0; i < this->params.num_of_dofs; ++i)
@@ -379,51 +386,51 @@ void RL_Sim::RobotControl()
 
     if (simulation_running)
     {
-        this->motiontime++;
+        // this->motiontime++;
 
-        if (this->control.current_keyboard == Input::Keyboard::W)
-        {
-            this->control.x += 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::S)
-        {
-            this->control.x -= 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::A)
-        {
-            this->control.y += 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::D)
-        {
-            this->control.y -= 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::Q)
-        {
-            this->control.yaw += 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::E)
-        {
-            this->control.yaw -= 0.1;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::Space)
-        {
-            this->control.x = 0;
-            this->control.y = 0;
-            this->control.yaw = 0;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
-        if (this->control.current_keyboard == Input::Keyboard::N || this->control.current_gamepad == Input::Gamepad::X)
-        {
-            this->control.navigation_mode = !this->control.navigation_mode;
-            std::cout << std::endl << LOGGER::INFO << "Navigation mode: " << (this->control.navigation_mode ? "ON" : "OFF") << std::endl;
-            this->control.current_keyboard = this->control.last_keyboard;
-        }
+        // if (this->control.current_keyboard == Input::Keyboard::W)
+        // {
+        //     this->control.x += 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::S)
+        // {
+        //     this->control.x -= 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::A)
+        // {
+        //     this->control.y += 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::D)
+        // {
+        //     this->control.y -= 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::Q)
+        // {
+        //     this->control.yaw += 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::E)
+        // {
+        //     this->control.yaw -= 0.1;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::Space)
+        // {
+        //     this->control.x = 0;
+        //     this->control.y = 0;
+        //     this->control.yaw = 0;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
+        // if (this->control.current_keyboard == Input::Keyboard::N || this->control.current_gamepad == Input::Gamepad::X)
+        // {
+        //     this->control.navigation_mode = !this->control.navigation_mode;
+        //     std::cout << std::endl << LOGGER::INFO << "Navigation mode: " << (this->control.navigation_mode ? "ON" : "OFF") << std::endl;
+        //     this->control.current_keyboard = this->control.last_keyboard;
+        // }
         // this->target_pos = this->target_pos_msg.pose; // TODO 
 
         this->GetState(&this->robot_state);
@@ -559,6 +566,9 @@ void RL_Sim::RunModel()
     if (this->rl_init_done && simulation_running)
     {
         this->episode_length_buf += 1;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
         // this->obs.lin_vel = torch::tensor({{this->vel.linear.x, this->vel.linear.y, this->vel.linear.z}});
         this->obs.ang_vel = torch::tensor(this->robot_state.imu.gyroscope).unsqueeze(0);
         if (this->control.navigation_mode)
@@ -576,12 +586,12 @@ void RL_Sim::RunModel()
 
         auto actions = this->Forward();
         this->obs.actions = actions;
-        // auto urdf_actions = torch::zeros_like(actions);
-        // for (int i = 0; i < this->params.num_of_dofs; ++i){
-        //     urdf_actions[0][this->params.joint_mapping[i]] = actions[0][i];
-        // }
-
-        this->ComputeOutput(actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
+        auto reordered_actions = torch::zeros_like(actions);
+        for (int i = 0; i < this->params.num_of_dofs; ++i)
+        {
+            reordered_actions[0][i] = actions[0][this->params.joint_mapping[i]];
+        }
+        this->ComputeOutput(reordered_actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
 
         if (this->output_dof_pos.defined() && this->output_dof_pos.numel() > 0)
         {
@@ -597,15 +607,18 @@ void RL_Sim::RunModel()
         }
 
         // this->TorqueProtect(this->output_dof_tau);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "Model inference time: " << duration.count() << " ms" << std::endl;
 
-#ifdef CSV_LOGGER
-        torch::Tensor tau_est = torch::zeros({1, this->params.num_of_dofs});
-        for (int i = 0; i < this->params.num_of_dofs; ++i)
-        {
-            tau_est[0][i] = this->joint_efforts[this->params.joint_controller_names[i]];
-        }
-        this->CSVLogger(this->output_dof_tau, tau_est, this->obs.dof_pos, this->output_dof_pos, this->obs.dof_vel);
-#endif
+// #ifdef CSV_LOGGER
+//         torch::Tensor tau_est = torch::zeros({1, this->params.num_of_dofs});
+//         for (int i = 0; i < this->params.num_of_dofs; ++i)
+//         {
+//             tau_est[0][i] = this->joint_efforts[this->params.joint_controller_names[i]];
+//         }
+//         this->CSVLogger(this->output_dof_tau, tau_est, this->obs.dof_pos, this->output_dof_pos, this->obs.dof_vel);
+// #endif
     }
 }
 
@@ -626,6 +639,7 @@ torch::Tensor RL_Sim::Forward()
     else
     {
         // TODO get policy grid mask here
+        std::cout << "voxel grid: " << this->voxel_grid << std::endl;
         actions = this->model.run(clamped_obs, this->voxel_grid, mask);
 
     }

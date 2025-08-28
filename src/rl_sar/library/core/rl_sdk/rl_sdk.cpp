@@ -105,14 +105,19 @@ torch::Tensor RL::ComputeObservation()
         // hussar
         else if (observation == "command_hussar"){
             // auto cur = this->obs.target_pos;
-            torch::Tensor allocated_time = torch::full({1, 1}, 6.0f, torch::kFloat32);
-            auto diff = this->target_pos - this->base_pos;
-            diff = this->QuatRotateInverse(this->obs.base_quat, diff);
-            diff = diff.index({torch::indexing::Slice(0, 1), torch::indexing::Slice(0, 2)});
-            this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
-            auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
+            // torch::Tensor allocated_time = torch::full({1, 1}, 6.0f, torch::kFloat32);
+            // auto diff = this->target_pos - this->base_pos;
+            // diff = this->QuatRotateInverse(this->obs.base_quat, diff);
+            // diff = diff.index({torch::indexing::Slice(0, 1), torch::indexing::Slice(0, 2)});
+            // this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
+            // auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
+            auto cur = torch::zeros({1, 4});
+            cur[0][0] = 1.0;
+            cur[0][1] = 0.0;
+            cur[0][2] = 0.0;
+            cur[0][3] = 6.0;
             obs_list.push_back(HistObs("command_hussar", cur));
-            std::cout << "command_hussar" << cur << std::endl;
+            // std::cout << "command_hussar" << cur << std::endl;
         }
         else if (observation == "ang_vel_hussar"){
             auto cur = this->obs.ang_vel * this->params.ang_vel_scale;
@@ -127,13 +132,27 @@ torch::Tensor RL::ComputeObservation()
         else if (observation == "dof_pos_multi_hussar"){
             auto cur = this->obs.dof_pos - this->params.default_dof_pos;
             cur = cur * this->params.dof_pos_scale;
-            obs_list.push_back(HistObs("dof_pos_multi_hussar", cur));
+            auto reordered_cur = torch::zeros_like(cur);
+            for (int i = 0; i < this->params.num_of_dofs; ++i)
+            {
+                reordered_cur[0][this->params.policy_joint_mapping[i]] = cur[0][i];
+            }
+            obs_list.push_back(HistObs("dof_pos_multi_hussar", reordered_cur));
             // std::cout << "dof_pos_multi_hussar" << cur << std::endl;
         }
         else if (observation == "dof_vel_multi_hussar"){
             auto cur = this->obs.dof_vel * this->params.dof_vel_scale;
-            obs_list.push_back(HistObs("dof_vel_multi_hussar", cur));
-            // std::cout << "dof_vel_multi_hussar" << cur << std::endl;
+
+            auto reordered_cur = torch::zeros_like(cur);
+            for (int i = 0; i < this->params.num_of_dofs; ++i)
+            {
+                reordered_cur[0][this->params.policy_joint_mapping[i]] = cur[0][i];
+            }
+
+            auto history_dof_vel = HistObs("dof_vel_multi_hussar", reordered_cur);
+            obs_list.push_back(history_dof_vel);
+            std::cout << "dof_vel" << reordered_cur << std::endl;
+            std::cout << "dof_vel_multi_hussar" << history_dof_vel << std::endl;
         }
         else if (observation == "prev_actions_multi_hussar"){
             auto cur = this->obs.actions;
@@ -143,6 +162,7 @@ torch::Tensor RL::ComputeObservation()
         else if (observation == "grid_map_hussar"){
             torch::Tensor occ = this->voxelizer3d->fetchVoxelObservation();
             // std::cout << occ << std::endl;
+            occ = torch::zeros_like(occ).to(torch::kFloat32);
             this->voxel_grid = occ.to(torch::kFloat32);
         }
     }
@@ -537,6 +557,7 @@ void RL::ReadYamlBase(std::string robot_path)
     this->params.joint_names = ReadVectorFromYaml<std::string>(config["joint_names"]);
     this->params.joint_controller_names = ReadVectorFromYaml<std::string>(config["joint_controller_names"]);
     this->params.joint_mapping = ReadVectorFromYaml<int>(config["joint_mapping"]);
+    this->params.policy_joint_mapping = ReadVectorFromYaml<int>(config["policy_joint_mapping"]);
 }
 
 void RL::ReadYamlRL(std::string robot_path)
@@ -600,6 +621,7 @@ void RL::ReadYamlRL(std::string robot_path)
     this->params.torque_limits = torch::tensor(ReadVectorFromYaml<double>(config["torque_limits"])).view({1, -1});
     this->params.default_dof_pos = torch::tensor(ReadVectorFromYaml<double>(config["default_dof_pos"])).view({1, -1});
     this->params.joint_mapping = ReadVectorFromYaml<int>(config["joint_mapping"]);
+    this->params.policy_joint_mapping = ReadVectorFromYaml<int>(config["policy_joint_mapping"]);
 }
 
 void RL::CSVInit(std::string robot_path)

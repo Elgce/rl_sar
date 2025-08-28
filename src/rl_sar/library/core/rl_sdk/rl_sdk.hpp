@@ -159,6 +159,7 @@ struct ModelParams
     std::vector<std::string> joint_controller_names;
     std::vector<std::string> joint_names;
     std::vector<int> joint_mapping;
+    std::vector<int> policy_joint_mapping;
 };
 
 struct Observations

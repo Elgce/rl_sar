@@ -105,19 +105,15 @@ torch::Tensor RL::ComputeObservation()
         // hussar
         else if (observation == "command_hussar"){
             // auto cur = this->obs.target_pos;
-            // torch::Tensor allocated_time = torch::full({1, 1}, 6.0f, torch::kFloat32);
-            // auto diff = this->target_pos - this->base_pos;
-            // diff = this->QuatRotateInverse(this->obs.base_quat, diff);
-            // diff = diff.index({torch::indexing::Slice(0, 1), torch::indexing::Slice(0, 2)});
-            // this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
-            // auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
-            auto cur = torch::zeros({1, 4});
-            cur[0][0] = 1.0;
-            cur[0][1] = 0.0;
-            cur[0][2] = 0.0;
-            cur[0][3] = 6.0;
+            torch::Tensor allocated_time = torch::full({1, 1}, 6.0f, torch::kFloat32);
+            auto diff = this->target_pos - this->base_pos;
+            diff = this->QuatRotateInverse(this->obs.base_quat, diff);
+            diff = diff.index({torch::indexing::Slice(0, 1), torch::indexing::Slice(0, 2)});
+            this->time_rest.index({0, 0}).sub_(0.02f).clamp_min_(0.0f);
+            auto cur = torch::cat(std::vector<torch::Tensor>{diff, allocated_time - this->time_rest, this->time_rest}, 1);
             obs_list.push_back(HistObs("command_hussar", cur));
-            // std::cout << "command_hussar" << cur << std::endl;
+            std::cout << "command_hussar" << cur << std::endl;
+            std::cout << "base_quat" << this->obs.base_quat << std::endl;
         }
         else if (observation == "ang_vel_hussar"){
             auto cur = this->obs.ang_vel * this->params.ang_vel_scale;
@@ -151,8 +147,8 @@ torch::Tensor RL::ComputeObservation()
 
             auto history_dof_vel = HistObs("dof_vel_multi_hussar", reordered_cur);
             obs_list.push_back(history_dof_vel);
-            std::cout << "dof_vel" << reordered_cur << std::endl;
-            std::cout << "dof_vel_multi_hussar" << history_dof_vel << std::endl;
+            // std::cout << "dof_vel" << reordered_cur << std::endl;
+            // std::cout << "dof_vel_multi_hussar" << history_dof_vel << std::endl;
         }
         else if (observation == "prev_actions_multi_hussar"){
             auto cur = this->obs.actions;
@@ -184,7 +180,7 @@ void RL::InitObservations()
     this->obs.ang_vel = torch::tensor({{0.0, 0.0, 0.0}});
     this->obs.gravity_vec = torch::tensor({{0.0, 0.0, -1.0}});
     this->obs.commands = torch::tensor({{0.0, 0.0, 0.0}});
-    this->obs.base_quat = torch::tensor({{0.0, 0.0, 0.0, 1.0}});
+    this->obs.base_quat = torch::tensor({{1.0, 0.0, 0.0, 0.0}});
 
     this->obs.dof_pos = this->params.default_dof_pos;
     this->obs.dof_vel = torch::zeros({1, this->params.num_of_dofs});

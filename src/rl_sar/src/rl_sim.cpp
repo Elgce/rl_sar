@@ -386,53 +386,6 @@ void RL_Sim::RobotControl()
 
     if (simulation_running)
     {
-        // this->motiontime++;
-
-        // if (this->control.current_keyboard == Input::Keyboard::W)
-        // {
-        //     this->control.x += 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::S)
-        // {
-        //     this->control.x -= 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::A)
-        // {
-        //     this->control.y += 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::D)
-        // {
-        //     this->control.y -= 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::Q)
-        // {
-        //     this->control.yaw += 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::E)
-        // {
-        //     this->control.yaw -= 0.1;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::Space)
-        // {
-        //     this->control.x = 0;
-        //     this->control.y = 0;
-        //     this->control.yaw = 0;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // if (this->control.current_keyboard == Input::Keyboard::N || this->control.current_gamepad == Input::Gamepad::X)
-        // {
-        //     this->control.navigation_mode = !this->control.navigation_mode;
-        //     std::cout << std::endl << LOGGER::INFO << "Navigation mode: " << (this->control.navigation_mode ? "ON" : "OFF") << std::endl;
-        //     this->control.current_keyboard = this->control.last_keyboard;
-        // }
-        // this->target_pos = this->target_pos_msg.pose; // TODO 
-
         this->GetState(&this->robot_state);
         this->StateController(&this->robot_state, &this->robot_command);
         this->SetCommand(&this->robot_command); // urdf order
@@ -469,12 +422,14 @@ void RL_Sim::ModelStatesCallback(
 )
 {
     //robot model is the third model in the list
-    if (msg->name[2] == "robot_model")
-    {
-        this->base_pose = msg->pose[2];
-        this->base_vel = msg->twist[2];
-        this->base_pos.index({0, 0}).fill_(this->base_pose.position.x);
-        this->base_pos.index({0, 1}).fill_(this->base_pose.position.y);
+    for (int i = 0; i < msg->name.size(); i++){
+        if (msg->name[i] == "robot_model")
+        {
+            this->base_pose = msg->pose[i];
+            this->base_vel = msg->twist[i];
+            this->base_pos.index({0, 0}).fill_(this->base_pose.position.x);
+            this->base_pos.index({0, 1}).fill_(this->base_pose.position.y);
+        }
     }
 }
 #endif
@@ -579,6 +534,7 @@ void RL_Sim::RunModel()
         {
             this->obs.commands = torch::tensor({{this->control.x, this->control.y, this->control.yaw}});
         }
+
         this->obs.base_quat = torch::tensor(this->robot_state.imu.quaternion).unsqueeze(0);
         this->obs.dof_pos = torch::tensor(this->robot_state.motor_state.q).narrow(0, 0, this->params.num_of_dofs).unsqueeze(0);
         this->obs.dof_vel = torch::tensor(this->robot_state.motor_state.dq).narrow(0, 0, this->params.num_of_dofs).unsqueeze(0);
@@ -589,7 +545,7 @@ void RL_Sim::RunModel()
         auto reordered_actions = torch::zeros_like(actions);
         for (int i = 0; i < this->params.num_of_dofs; ++i)
         {
-            reordered_actions[0][i] = actions[0][this->params.joint_mapping[i]];
+            reordered_actions[0][i] = actions[0][this->params.policy_joint_mapping[i]];
         }
         this->ComputeOutput(reordered_actions, this->output_dof_pos, this->output_dof_vel, this->output_dof_tau);
 
@@ -639,19 +595,11 @@ torch::Tensor RL_Sim::Forward()
     else
     {
         // TODO get policy grid mask here
-        std::cout << "voxel grid: " << this->voxel_grid << std::endl;
+        // std::cout << "voxel grid: " << this->voxel_grid << std::endl;
         actions = this->model.run(clamped_obs, this->voxel_grid, mask);
 
     }
-
-    if (this->params.clip_actions_upper.numel() != 0 && this->params.clip_actions_lower.numel() != 0)
-    {
-        return torch::clamp(actions, this->params.clip_actions_lower, this->params.clip_actions_upper);
-    }
-    else
-    {
-        return actions;
-    }
+    return actions;
 }
 
 void RL_Sim::Plot()
